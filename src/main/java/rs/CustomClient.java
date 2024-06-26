@@ -31,7 +31,7 @@ public class CustomClient {
         theNumberOfServers = theMachinesList.size();
         theInputFilenames = Arrays.asList(
 //                "sapiens.txt",
-//                "holmes.txt",
+                "holmes.txt",
                 "potter.txt"
         );
     }
@@ -148,7 +148,6 @@ public class CustomClient {
             String[] myEntryStrings = myOutput.split(" ");
             for (String aEntryString : myEntryStrings) {
                 String[] myEntryString = aEntryString.split("-");
-                System.out.println(myEntryString[0] + " " + myEntryString[1]);
                 int myKey = Integer.parseInt(myEntryString[0]);
                 int myValue = Integer.parseInt(myEntryString[1]);
                 myWordFreqCounter.put(myKey, myWordFreqCounter.getOrDefault(myKey, 0) + myValue);
