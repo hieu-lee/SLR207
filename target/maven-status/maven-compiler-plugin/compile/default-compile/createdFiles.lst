@@ -1,8 +1,8 @@
 rs\CustomFTPClientType.class
 rs\CustomFTPCredential.class
 rs\CustomClient.class
+rs\FreqCount.class
 rs\CustomFTPServer.class
-rs\MinMaxFreq.class
 rs\CustomFTPClient.class
 rs\SocketUtils.class
 rs\CustomServer.class

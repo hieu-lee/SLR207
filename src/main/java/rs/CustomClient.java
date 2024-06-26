@@ -1,7 +1,5 @@
 package rs;
 
-import javafx.util.Pair;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -180,30 +178,30 @@ public class CustomClient {
             }
         }
         int myTotalFreqCount = myWordFreqCounter.values().stream().mapToInt(i -> i).sum();
-        List<Pair<Integer, Integer>> myFreqCountList = new ArrayList<>();
+        List<FreqCount> myFreqCountList = new ArrayList<>();
         for (Map.Entry<Integer, Integer> myEntry : myWordFreqCounter.entrySet()) {
-            myFreqCountList.add(new Pair<>(myEntry.getKey(), myEntry.getValue()));
+            myFreqCountList.add(new FreqCount(myEntry.getKey(), myEntry.getValue()));
         }
-        myFreqCountList.sort(Comparator.comparingInt(Pair::getKey));
+        myFreqCountList.sort(Comparator.comparingInt(FreqCount::getFreq));
         int myCurrentFreqCount = 0;
         List<Integer> myBoundaries = new ArrayList<>();
         int n = myFreqCountList.size();
         for (int i = 0; i < myFreqCountList.size(); i++) {
             if (myBoundaries.size() == theNumberOfServers - 1) {
-                myBoundaries.add(myFreqCountList.get(myFreqCountList.size() - 1).getKey());
+                myBoundaries.add(myFreqCountList.get(myFreqCountList.size() - 1).getFreq());
                 break;
             }
-            int myFreqCount = myFreqCountList.get(i).getValue();
+            int myFreqCount = myFreqCountList.get(i).getCount();
             myCurrentFreqCount += myFreqCount;
             if (myCurrentFreqCount >= ((double)myTotalFreqCount / (double)n)) {
                 if (myCurrentFreqCount - myFreqCount == 0) {
-                    myBoundaries.add(myFreqCountList.get(i).getKey());
+                    myBoundaries.add(myFreqCountList.get(i).getFreq());
                     n -= (i + 1);
                     myTotalFreqCount -= myCurrentFreqCount;
                     myCurrentFreqCount = 0;
                 }
                 else {
-                    myBoundaries.add(myFreqCountList.get(i - 1).getKey());
+                    myBoundaries.add(myFreqCountList.get(i - 1).getFreq());
                     n -= i;
                     myTotalFreqCount -= (myCurrentFreqCount - myFreqCount);
                     myCurrentFreqCount = myFreqCount;
