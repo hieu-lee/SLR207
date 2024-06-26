@@ -2,13 +2,20 @@ package rs;
 
 import javafx.util.Pair;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class CustomClient {
@@ -63,7 +70,7 @@ public class CustomClient {
         }
         CustomFTPClient[] theFTPClients = new CustomFTPClient[theNumberOfServers];
         for (int i = 0; i < theNumberOfServers; i++) {
-            theFTPClients[i] = new CustomFTPClient("sapiens.txt", "input" + i + ".txt", theMachinesList.get(i), CustomFTPCredential.getInstance(), CustomFTPClientType.APPEND);
+            theFTPClients[i] = new CustomFTPClient("input.txt", "input" + i + ".txt", theMachinesList.get(i), CustomFTPCredential.getInstance(), CustomFTPClientType.APPEND);
             theFTPClients[i].start();
         }
         for (int i = 0; i < theNumberOfServers; i++) {
@@ -78,6 +85,8 @@ public class CustomClient {
             myInputFile.delete();
         }
     }
+
+
 
     private void publishServerNames() {
         CustomFTPClient[] theServerNamesFTPClients = new CustomFTPClient[theNumberOfServers];
@@ -146,6 +155,7 @@ public class CustomClient {
             String[] myEntryStrings = myOutput.split(" ");
             for (String aEntryString : myEntryStrings) {
                 String[] myEntryString = aEntryString.split("-");
+                System.out.println(myEntryString[0] + " " + myEntryString[1]);
                 int myKey = Integer.parseInt(myEntryString[0]);
                 int myValue = Integer.parseInt(myEntryString[1]);
                 myWordFreqCounter.put(myKey, myWordFreqCounter.getOrDefault(myKey, 0) + myValue);
