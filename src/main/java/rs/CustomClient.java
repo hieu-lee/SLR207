@@ -17,6 +17,7 @@ public class CustomClient {
     private final List<String> theMachinesList;
     private final int theNumberOfServers;
     private final List<String> theInputFilenames;
+    private static final String THE_INPUT_FILES_DIRECTORY = "input_files";
 
     public static void main(String[] args) {
         CustomClient myClient = new CustomClient();
@@ -37,7 +38,7 @@ public class CustomClient {
             aE.printStackTrace();
         }
 
-        File myFolder = new File("input_files");
+        File myFolder = new File(THE_INPUT_FILES_DIRECTORY);
         theInputFilenames = Arrays.stream(Objects.requireNonNull(myFolder.listFiles()))
                 .filter(File::isFile)
                 .map(File::getName)
@@ -56,7 +57,7 @@ public class CustomClient {
             }
 
             for (String aFilename : theInputFilenames) {
-                File myFile = new File(aFilename);
+                File myFile = new File(THE_INPUT_FILES_DIRECTORY + "/" + aFilename);
                 try (Stream<String> myLinesStream = Files.lines(myFile.toPath())) {
                     myLinesStream.forEach(aLine -> {
                         int myServerIndex = Math.abs(aLine.hashCode()) % theNumberOfServers;
@@ -231,6 +232,7 @@ public class CustomClient {
             myResultFTPClients[i] = new CustomFTPClient("output.txt", "", theMachinesList.get(i).trim(), CustomFTPCredential.getInstance(), CustomFTPClientType.DISPLAY);
             myResultFTPClients[i].run();
         }
+        System.out.println("Output file generated");
     }
 
     private void closeClientSockets(Socket[] aClientSockets) {
