@@ -18,8 +18,11 @@ public class CustomClient {
     private static final String THE_INPUT_FILES_DIRECTORY = "input_files";
 
     public static void main(String[] args) {
+        long myStartTime = System.currentTimeMillis();;
         CustomClient myClient = new CustomClient();
         myClient.run();
+        long myEndTime = System.currentTimeMillis();;
+        System.out.println("Time taken: " + (myEndTime - myStartTime) + "ms");
     }
 
     public CustomClient() {
@@ -102,8 +105,6 @@ public class CustomClient {
             }
         }
     }
-
-
 
     private void publishServerNames() {
         CustomFTPClient[] theServerNamesFTPClients = new CustomFTPClient[theNumberOfServers];
