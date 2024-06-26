@@ -231,14 +231,33 @@ public class CustomServer {
             }
             throw new RuntimeException("Invalid command");
         }
+
         List<Map.Entry<Integer, String>> myWordsList = IntStream.range(0, theNumberOfServers)
-                .mapToObj(i -> !theServerName.equals(aServerNames[i])
-                        ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServerNames[i] + THE_REDUCE_FILE_SUFFIX)
-                        : Arrays.stream(aTokensList[i].toString().split("\n")))
+                .mapToObj(i -> {
+                    try {
+                        return !theServerName.equals(aServerNames[i]) ?
+                                Files.lines(Paths.get(theCustomFTPServer.getHomeDirectory() + "/" + aServerNames[i] + THE_REDUCE_FILE_SUFFIX))
+                                        .flatMap(aLine -> Arrays.stream(aLine.split("\n")))
+                                        .filter(aWord -> !aWord.isEmpty())
+                                        .map(aWord -> {
+                                            String[] tokens = aWord.split(" ");
+                                            return new AbstractMap.SimpleEntry<>(Integer.parseInt(tokens[0]), tokens[1]);
+                                        })
+                                : Arrays.stream(aTokensList[i].toString().split("\n"))
+                                .filter(aWord -> !aWord.isEmpty())
+                                .map(aWord -> {
+                                    String[] aTokens = aWord.split(" ");
+                                    return new AbstractMap.SimpleEntry<>(Integer.parseInt(aTokens[0]), aTokens[1]);
+                                });
+                    } catch (IOException aE) {
+                        aE.printStackTrace();
+                        return Stream.<Map.Entry<Integer, String>>empty();
+                    }
+                })
                 .flatMap(Function.identity())
-                .filter(aLine -> !aLine.isEmpty())
-                .map(aLine -> aLine.split(" "))
-                .map(aTokens -> new AbstractMap.SimpleEntry<>(Integer.parseInt(aTokens[0]), aTokens[1])).sorted((aFirst, aSecond) -> (!Objects.equals(aFirst.getKey(), aSecond.getKey())) ? aFirst.getKey() - aSecond.getKey() : aFirst.getValue().compareTo(aSecond.getValue())).collect(Collectors.toList());
+                .sorted(Comparator.comparingInt((Map.Entry<Integer, String> entry) -> entry.getKey())
+                        .thenComparing(Map.Entry::getValue))
+                .collect(Collectors.toList());
 
 
         StringBuilder myOutput = new StringBuilder();
