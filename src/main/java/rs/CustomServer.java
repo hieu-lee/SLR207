@@ -10,6 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class CustomServer {
@@ -121,10 +123,7 @@ public class CustomServer {
     }
 
     private Map<String, Integer> reducePhase1(Socket aClientSocket, String[] aServers, StringBuilder[] aTokensList) {
-        if (SocketUtils.read(aClientSocket).equals("reduce 1 start")) {
-            System.out.println("Start reduce phase 1");
-        }
-        else {
+        if (!"reduce 1 start".equals(SocketUtils.read(aClientSocket))) {
             try {
                 theServerSocket.close();
             } catch (IOException aE) {
@@ -133,31 +132,27 @@ public class CustomServer {
             throw new RuntimeException("Invalid command");
         }
 
-        Map<String, Integer> myWordCounts = new HashMap<>();
-        for (int i = 0; i < theNumberOfServers; i++) {
-            String[] myLines;
-            if (!theServerName.equals(aServers[i])) {
-                List<String> myWords = new ArrayList<>();
-                try {
-                    myWords = Files.readAllLines(Paths.get(theCustomFTPServer.getHomeDirectory() + "/" + aServers[i] + THE_MAP_FILE_SUFFIX));
-                } catch (IOException aE) {
-                    aE.printStackTrace();
-                }
-                myLines = new String[myWords.size()];
-                myWords.toArray(myLines);
-            }
-            else {
-                myLines = aTokensList[i].toString().split("\n");
-            }
+        System.out.println("Start reduce phase 1");
 
-            for (String aWord : myLines) {
-                if (!aWord.isEmpty()) {
-                    String[] myTokens = aWord.split(" ");
-                    myWordCounts.put(myTokens[0], myWordCounts.getOrDefault(myTokens[0], 0) + Integer.parseInt(myTokens[1]));
-                }
-            }
+        return IntStream.range(0, theNumberOfServers)
+                .mapToObj(i -> !theServerName.equals(aServers[i])
+                        ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServers[i])
+                        : Arrays.stream(aTokensList[i].toString().split("\n")))
+                .flatMap(aStream -> aStream)
+                .filter(aLine -> !aLine.isEmpty())
+                .map(aLine -> aLine.split(" "))
+                .collect(Collectors.toMap(aTokens -> aTokens[0],
+                        aTokens -> Integer.parseInt(aTokens[1]),
+                        Integer::sum));
+    }
+
+    private Stream<String> readLinesFromFile(String dDirectory, String aServerName) {
+        try {
+            return Files.lines(Paths.get(dDirectory, aServerName + THE_MAP_FILE_SUFFIX));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Stream.empty();
         }
-        return myWordCounts;
     }
 
     private List<Integer> getBoundaries(Map<String, Integer> aWordCounts, Socket aClientSocket) {
@@ -178,35 +173,6 @@ public class CustomServer {
         }
         System.out.println("Boundaries done");
         return myBoundaries;
-    }
-
-    private MinMaxFreq getMinMaxFreq(Map<String, Integer> aWordCounts, Socket aClientSocket) {
-        int myMinFreq = Integer.MAX_VALUE;
-        int myMaxFreq = Integer.MIN_VALUE;
-        for (Map.Entry<String, Integer> entry : aWordCounts.entrySet()) {
-            if (entry.getValue() < myMinFreq) {
-                myMinFreq = entry.getValue();
-            }
-            if (entry.getValue() > myMaxFreq) {
-                myMaxFreq = entry.getValue();
-            }
-        }
-        try {
-            SocketUtils.write(aClientSocket, myMinFreq + " " + myMaxFreq);
-
-            String myGlobalFreqMessage = SocketUtils.read(aClientSocket);
-            String[] myMessageParts = myGlobalFreqMessage.split(" ");
-            if (myMessageParts.length != 2) {
-                theServerSocket.close();
-                System.out.println(myGlobalFreqMessage);
-                throw new RuntimeException("Invalid global frequency format");
-            }
-            myMinFreq = Integer.parseInt(myMessageParts[0]);
-            myMaxFreq = Integer.parseInt(myMessageParts[1]);
-        } catch (IOException aE) {
-            aE.printStackTrace();
-        }
-        return new MinMaxFreq(myMinFreq, myMaxFreq);
     }
 
     private int getServerIndex(int aFreq, List<Integer> aBoundaries) {
