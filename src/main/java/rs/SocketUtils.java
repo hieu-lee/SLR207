@@ -22,14 +22,9 @@ public class SocketUtils {
     @NotNull
     public static String read(Socket aSocket) {
         try {
-            InputStream myInputStream = aSocket.getInputStream();
-            ByteArrayOutputStream myBuffer = new ByteArrayOutputStream();
-            byte[] myData = new byte[1024];
-            int myLength;
-            while ((myLength = myInputStream.read(myData)) != -1) {
-                myBuffer.write(myData, 0, myLength);
-            }
-            return myBuffer.toString("UTF-8");
+            byte[] myBuffer = new byte[1024];
+            int myLength = aSocket.getInputStream().read(myBuffer);
+            return new String(myBuffer, 0, myLength);
         } catch (Exception aE) {
             aE.printStackTrace();
             return "";

@@ -2,20 +2,13 @@ package rs;
 
 import javafx.util.Pair;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class CustomClient {
@@ -37,8 +30,8 @@ public class CustomClient {
         }
         theNumberOfServers = theMachinesList.size();
         theInputFilenames = Arrays.asList(
-                "sapiens.txt",
-                "holmes.txt",
+//                "sapiens.txt",
+//                "holmes.txt",
                 "potter.txt"
         );
     }
