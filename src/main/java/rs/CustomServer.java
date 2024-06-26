@@ -137,35 +137,20 @@ public class CustomServer {
         }
 
         Map<String, Integer> myWordCounts = new HashMap<>();
-        for (int i = 0; i < theNumberOfServers; i++) {
-            String[] myLines;
-            if (!theServerName.equals(aServers[i])) {
-                List<String> myWords = new ArrayList<>();
-                try {
-                    myWords = Files.readAllLines(Paths.get(theCustomFTPServer.getHomeDirectory() + "/" + aServers[i] + THE_MAP_FILE_SUFFIX));
-                } catch (IOException aE) {
-                    aE.printStackTrace();
-                }
-                myLines = new String[myWords.size()];
-                myWords.toArray(myLines);
-            }
-            else {
-                myLines = aTokensList[i].toString().split("\n");
-            }
 
-            for (String aWord : myLines) {
-                if (!aWord.isEmpty()) {
-                    String[] myTokens = aWord.split(" ");
-                    myWordCounts.put(myTokens[0], myWordCounts.getOrDefault(myTokens[0], 0) + Integer.parseInt(myTokens[1]));
-                }
-            }
-        }
+        IntStream.range(0, theNumberOfServers)
+                .mapToObj(i -> !theServerName.equals(aServers[i])
+                        ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServers[i])
+                        : Arrays.stream(aTokensList[i].toString().split("\n")))
+                .flatMap(Function.identity())
+                .filter(line -> !line.isEmpty())
+                .map(line -> line.split(" ")).forEach(aTokens -> myWordCounts.put(aTokens[0], myWordCounts.getOrDefault(aTokens[0], 0) + Integer.parseInt(aTokens[1])));
         return myWordCounts;
     }
 
-    private Stream<String> readLinesFromFile(String dDirectory, String aServerName) {
+    private Stream<String> readLinesFromFile(String aDirectory, String aServerName) {
         try {
-            return Files.lines(Paths.get(dDirectory, aServerName + THE_MAP_FILE_SUFFIX));
+            return Files.lines(Paths.get(aDirectory, aServerName + THE_MAP_FILE_SUFFIX));
         } catch (IOException e) {
             e.printStackTrace();
             return Stream.empty();
@@ -248,28 +233,13 @@ public class CustomServer {
         }
         List<Map.Entry<Integer, String>> myWordsList = new ArrayList<>();
 
-        for (int i = 0; i < theNumberOfServers; i++) {
-            String[] myLines;
-            if (!theServerName.equals(aServerNames[i])) {
-                List<String> myWords = new ArrayList<>();
-                try {
-                    myWords = Files.readAllLines(Paths.get(theCustomFTPServer.getHomeDirectory() + "/" + aServerNames[i] + THE_REDUCE_FILE_SUFFIX));
-                } catch (IOException aE) {
-                    aE.printStackTrace();
-                }
-                myLines = new String[myWords.size()];
-                myWords.toArray(myLines);
-            } else {
-                myLines = aTokensList[i].toString().split("\n");
-            }
-
-            for (String aWord : myLines) {
-                if (!aWord.isEmpty()) {
-                    String[] myTokens = aWord.split(" ");
-                    myWordsList.add(new AbstractMap.SimpleEntry<>(Integer.parseInt(myTokens[0]), myTokens[1]));
-                }
-            }
-        }
+        IntStream.range(0, theNumberOfServers)
+                .mapToObj(i -> !theServerName.equals(aServerNames[i])
+                        ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServerNames[i])
+                        : Arrays.stream(aTokensList[i].toString().split("\n")))
+                .flatMap(Function.identity())
+                .filter(line -> !line.isEmpty())
+                .map(line -> line.split(" ")).forEach(aTokens -> myWordsList.add(new AbstractMap.SimpleEntry<>(Integer.parseInt(aTokens[0]), aTokens[1])));
 
         myWordsList.sort((aFirst, aSecond) -> (!Objects.equals(aFirst.getKey(), aSecond.getKey())) ? aFirst.getKey() - aSecond.getKey() : aFirst.getValue().compareTo(aSecond.getValue()));
 
