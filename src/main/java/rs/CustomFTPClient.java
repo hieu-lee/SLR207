@@ -5,6 +5,11 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.stream.Collectors;
 
 public class CustomFTPClient extends Thread {
     private final String theFilename;
@@ -81,10 +86,8 @@ public class CustomFTPClient extends Thread {
         try {
             InputStream myInputStream = theFtpClient.retrieveFileStream(theFilename);
             BufferedReader myReader = new BufferedReader(new InputStreamReader(myInputStream));
-            String myLine;
-            while ((myLine = myReader.readLine()) != null) {
-                System.out.println(myLine);
-            }
+            Path myOutputPath = Paths.get("output.txt");
+            Files.write(myOutputPath, myReader.lines().collect(Collectors.toList()), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             myReader.close();
             theFtpClient.completePendingCommand();
         } catch (IOException aE) {

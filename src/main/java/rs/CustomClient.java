@@ -2,11 +2,13 @@ package rs;
 
 import javafx.util.Pair;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,38 +31,57 @@ public class CustomClient {
             aE.printStackTrace();
         }
         theNumberOfServers = theMachinesList.size();
-        theInputFilenames = Arrays.asList(
-//                "sapiens.txt",
-                "holmes.txt",
-                "potter.txt"
-        );
+        try {
+            Files.deleteIfExists(Paths.get("output.txt"));
+        } catch (IOException aE) {
+            aE.printStackTrace();
+        }
+
+        File myFolder = new File("input_files");
+        theInputFilenames = Arrays.stream(Objects.requireNonNull(myFolder.listFiles()))
+                .filter(File::isFile)
+                .map(File::getName)
+                .collect(Collectors.toList());
     }
 
     private void publishFileContents() {
-        for (String aFilename : theInputFilenames) {
-            File myFile = new File(aFilename);
-            try (Stream<String> myLinesStream = Files.lines(myFile.toPath())) {
-                myLinesStream.forEach(aLine -> {
-                    int myServerIndex = Math.abs(aLine.hashCode()) % theNumberOfServers;
-                    File myInputFile = new File("input" + myServerIndex + ".txt");
-                    if (!myInputFile.exists()) {
+        BufferedWriter[] myBufferedWriters = new BufferedWriter[theNumberOfServers];
+        try {
+            for (int i = 0; i < theNumberOfServers; i++) {
+                File myInputFile = new File("input" + i + ".txt");
+                if (!myInputFile.exists()) {
+                    myInputFile.createNewFile();
+                }
+                myBufferedWriters[i] = Files.newBufferedWriter(Paths.get("input" + i + ".txt"), StandardOpenOption.APPEND);
+            }
+
+            for (String aFilename : theInputFilenames) {
+                File myFile = new File(aFilename);
+                try (Stream<String> myLinesStream = Files.lines(myFile.toPath())) {
+                    myLinesStream.forEach(aLine -> {
+                        int myServerIndex = Math.abs(aLine.hashCode()) % theNumberOfServers;
                         try {
-                            myInputFile.createNewFile();
+                            myBufferedWriters[myServerIndex].write(aLine.toLowerCase() + "\n");
                         } catch (IOException aE) {
                             aE.printStackTrace();
                         }
-                    }
-                    try {
-                        Files.write(Paths.get("input" + myServerIndex + ".txt"), (aLine.toLowerCase() + "\n").getBytes(), java.nio.file.StandardOpenOption.APPEND);
-                    } catch (IOException aE) {
-                        aE.printStackTrace();
-                    }
-                });
+                    });
+                }
             }
-            catch (IOException aE) {
-                aE.printStackTrace();
+        } catch (IOException aE) {
+            aE.printStackTrace();
+        } finally {
+            for (int i = 0; i < theNumberOfServers; i++) {
+                try {
+                    if (myBufferedWriters[i] != null) {
+                        myBufferedWriters[i].close();
+                    }
+                } catch (IOException aE) {
+                    aE.printStackTrace();
+                }
             }
         }
+
         CustomFTPClient[] theFTPClients = new CustomFTPClient[theNumberOfServers];
         for (int i = 0; i < theNumberOfServers; i++) {
             theFTPClients[i] = new CustomFTPClient("input.txt", "input" + i + ".txt", theMachinesList.get(i), CustomFTPCredential.getInstance(), CustomFTPClientType.APPEND);
@@ -73,9 +94,13 @@ public class CustomClient {
                 aE.printStackTrace();
             }
         }
+
         for (int i = 0; i < theNumberOfServers; i++) {
-            File myInputFile = new File("input" + i + ".txt");
-            myInputFile.delete();
+            try {
+                Files.deleteIfExists(Paths.get("input" + i + ".txt"));
+            } catch (IOException aE) {
+                aE.printStackTrace();
+            }
         }
     }
 
