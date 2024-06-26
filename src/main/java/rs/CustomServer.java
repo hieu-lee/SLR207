@@ -124,7 +124,10 @@ public class CustomServer {
     }
 
     private Map<String, Integer> reducePhase1(Socket aClientSocket, String[] aServers, StringBuilder[] aTokensList) {
-        if (!"reduce 1 start".equals(SocketUtils.read(aClientSocket))) {
+        if (SocketUtils.read(aClientSocket).equals("reduce 1 start")) {
+            System.out.println("Start reduce phase 1");
+        }
+        else {
             try {
                 theServerSocket.close();
             } catch (IOException aE) {
@@ -133,18 +136,31 @@ public class CustomServer {
             throw new RuntimeException("Invalid command");
         }
 
-        System.out.println("Start reduce phase 1");
+        Map<String, Integer> myWordCounts = new HashMap<>();
+        for (int i = 0; i < theNumberOfServers; i++) {
+            String[] myLines;
+            if (!theServerName.equals(aServers[i])) {
+                List<String> myWords = new ArrayList<>();
+                try {
+                    myWords = Files.readAllLines(Paths.get(theCustomFTPServer.getHomeDirectory() + "/" + aServers[i] + THE_MAP_FILE_SUFFIX));
+                } catch (IOException aE) {
+                    aE.printStackTrace();
+                }
+                myLines = new String[myWords.size()];
+                myWords.toArray(myLines);
+            }
+            else {
+                myLines = aTokensList[i].toString().split("\n");
+            }
 
-        return IntStream.range(0, theNumberOfServers)
-                .mapToObj(i -> !theServerName.equals(aServers[i])
-                        ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServers[i])
-                        : Arrays.stream(aTokensList[i].toString().split("\n")))
-                .flatMap(Function.identity())
-                .filter(aLine -> !aLine.isEmpty())
-                .map(aLine -> aLine.split(" "))
-                .collect(Collectors.toMap(aTokens -> aTokens[0],
-                        aTokens -> Integer.parseInt(aTokens[1]),
-                        Integer::sum));
+            for (String aWord : myLines) {
+                if (!aWord.isEmpty()) {
+                    String[] myTokens = aWord.split(" ");
+                    myWordCounts.put(myTokens[0], myWordCounts.getOrDefault(myTokens[0], 0) + Integer.parseInt(myTokens[1]));
+                }
+            }
+        }
+        return myWordCounts;
     }
 
     private Stream<String> readLinesFromFile(String dDirectory, String aServerName) {
@@ -220,7 +236,9 @@ public class CustomServer {
     }
 
     private void reducePhase2(Socket aClientSocket, StringBuilder[] aTokensList, String[] aServerNames) {
-        if (!"reduce 2 start".equals(SocketUtils.read(aClientSocket))) {
+        if (SocketUtils.read(aClientSocket).equals("reduce 2 start")) {
+            System.out.println("Start reduce phase 2");
+        } else {
             try {
                 theServerSocket.close();
             } catch (IOException aE) {
@@ -228,25 +246,40 @@ public class CustomServer {
             }
             throw new RuntimeException("Invalid command");
         }
+        List<Map.Entry<Integer, String>> myWordsList = new ArrayList<>();
 
-        System.out.println("Start reduce phase 2");
+        for (int i = 0; i < theNumberOfServers; i++) {
+            String[] myLines;
+            if (!theServerName.equals(aServerNames[i])) {
+                List<String> myWords = new ArrayList<>();
+                try {
+                    myWords = Files.readAllLines(Paths.get(theCustomFTPServer.getHomeDirectory() + "/" + aServerNames[i] + THE_REDUCE_FILE_SUFFIX));
+                } catch (IOException aE) {
+                    aE.printStackTrace();
+                }
+                myLines = new String[myWords.size()];
+                myWords.toArray(myLines);
+            } else {
+                myLines = aTokensList[i].toString().split("\n");
+            }
 
-        List<Map.Entry<Integer, String>> myWordsList = IntStream.range(0, theNumberOfServers)
-                .mapToObj(i -> !theServerName.equals(aServerNames[i])
-                        ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServerNames[i] + THE_REDUCE_FILE_SUFFIX)
-                        : Arrays.stream(aTokensList[i].toString().split("\n")))
-                .flatMap(Function.identity())
-                .filter(aLine -> !aLine.isEmpty())
-                .map(aLine -> aLine.split(" "))
-                .map(aTokens -> new AbstractMap.SimpleEntry<>(Integer.parseInt(aTokens[0]), aTokens[1])).sorted(Map.Entry.comparingByKey())
-                .collect(Collectors.toList());
+            for (String aWord : myLines) {
+                if (!aWord.isEmpty()) {
+                    String[] myTokens = aWord.split(" ");
+                    myWordsList.add(new AbstractMap.SimpleEntry<>(Integer.parseInt(myTokens[0]), myTokens[1]));
+                }
+            }
+        }
 
-        String myOutput = myWordsList.stream()
-                .map(aEntry -> aEntry.getKey() + " " + aEntry.getValue())
-                .collect(Collectors.joining("\n"));
+        myWordsList.sort((aFirst, aSecond) -> (!Objects.equals(aFirst.getKey(), aSecond.getKey())) ? aFirst.getKey() - aSecond.getKey() : aFirst.getValue().compareTo(aSecond.getValue()));
+
+        StringBuilder myOutput = new StringBuilder();
+        for (Map.Entry<Integer, String> aWord : myWordsList) {
+            myOutput.append(aWord.getKey()).append(" ").append(aWord.getValue()).append("\n");
+        }
 
         try {
-            Files.write(Paths.get(theCustomFTPServer.getHomeDirectory(), "output.txt"), myOutput.getBytes());
+            Files.write(Paths.get(theCustomFTPServer.getHomeDirectory() + "/output.txt"), myOutput.toString().getBytes());
             SocketUtils.write(aClientSocket, "reduce 2 done");
             System.out.println("Reduce 2 done");
         } catch (IOException aE) {
