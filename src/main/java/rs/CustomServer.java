@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -138,7 +139,7 @@ public class CustomServer {
                 .mapToObj(i -> !theServerName.equals(aServers[i])
                         ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServers[i])
                         : Arrays.stream(aTokensList[i].toString().split("\n")))
-                .flatMap(aStream -> aStream)
+                .flatMap(Function.identity())
                 .filter(aLine -> !aLine.isEmpty())
                 .map(aLine -> aLine.split(" "))
                 .collect(Collectors.toMap(aTokens -> aTokens[0],
@@ -219,9 +220,7 @@ public class CustomServer {
     }
 
     private void reducePhase2(Socket aClientSocket, StringBuilder[] aTokensList, String[] aServerNames) {
-        if (SocketUtils.read(aClientSocket).equals("reduce 2 start")) {
-            System.out.println("Start reduce phase 2");
-        } else {
+        if (!"reduce 2 start".equals(SocketUtils.read(aClientSocket))) {
             try {
                 theServerSocket.close();
             } catch (IOException aE) {
@@ -229,40 +228,25 @@ public class CustomServer {
             }
             throw new RuntimeException("Invalid command");
         }
-        List<Map.Entry<Integer, String>> myWordsList = new ArrayList<>();
 
-        for (int i = 0; i < theNumberOfServers; i++) {
-            String[] myLines;
-            if (!theServerName.equals(aServerNames[i])) {
-                List<String> myWords = new ArrayList<>();
-                try {
-                    myWords = Files.readAllLines(Paths.get(theCustomFTPServer.getHomeDirectory() + "/" + aServerNames[i] + THE_REDUCE_FILE_SUFFIX));
-                } catch (IOException aE) {
-                    aE.printStackTrace();
-                }
-                myLines = new String[myWords.size()];
-                myWords.toArray(myLines);
-            } else {
-                myLines = aTokensList[i].toString().split("\n");
-            }
+        System.out.println("Start reduce phase 2");
 
-            for (String aWord : myLines) {
-                if (!aWord.isEmpty()) {
-                    String[] myTokens = aWord.split(" ");
-                    myWordsList.add(new AbstractMap.SimpleEntry<>(Integer.parseInt(myTokens[0]), myTokens[1]));
-                }
-            }
-        }
+        List<Map.Entry<Integer, String>> myWordsList = IntStream.range(0, theNumberOfServers)
+                .mapToObj(i -> !theServerName.equals(aServerNames[i])
+                        ? readLinesFromFile(theCustomFTPServer.getHomeDirectory(), aServerNames[i] + THE_REDUCE_FILE_SUFFIX)
+                        : Arrays.stream(aTokensList[i].toString().split("\n")))
+                .flatMap(Function.identity())
+                .filter(aLine -> !aLine.isEmpty())
+                .map(aLine -> aLine.split(" "))
+                .map(aTokens -> new AbstractMap.SimpleEntry<>(Integer.parseInt(aTokens[0]), aTokens[1])).sorted(Map.Entry.comparingByKey())
+                .collect(Collectors.toList());
 
-        myWordsList.sort((aFirst, aSecond) -> (!Objects.equals(aFirst.getKey(), aSecond.getKey())) ? aFirst.getKey() - aSecond.getKey() : aFirst.getValue().compareTo(aSecond.getValue()));
-
-        StringBuilder myOutput = new StringBuilder();
-        for (Map.Entry<Integer, String> aWord : myWordsList) {
-            myOutput.append(aWord.getKey()).append(" ").append(aWord.getValue()).append("\n");
-        }
+        String myOutput = myWordsList.stream()
+                .map(aEntry -> aEntry.getKey() + " " + aEntry.getValue())
+                .collect(Collectors.joining("\n"));
 
         try {
-            Files.write(Paths.get(theCustomFTPServer.getHomeDirectory() + "/output.txt"), myOutput.toString().getBytes());
+            Files.write(Paths.get(theCustomFTPServer.getHomeDirectory(), "output.txt"), myOutput.getBytes());
             SocketUtils.write(aClientSocket, "reduce 2 done");
             System.out.println("Reduce 2 done");
         } catch (IOException aE) {
